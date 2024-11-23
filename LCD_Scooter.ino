@@ -69,7 +69,7 @@ void loop() {
   float sensorVoltage = (rawValue / float(ADC_RESOLUTION)) * ADC_REF_VOLTAGE * 1000; // Convert to mV
 
   // Calculate current: (Vout - Vzero) / Sensitivity
-  current = (sensorVoltage - zeroCurrentOutput) / sensitivity;
+  current = -1 * (sensorVoltage - zeroCurrentOutput) / sensitivity;
 
   // Display results on the LCD
   displayResults();
