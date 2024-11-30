@@ -40,7 +40,7 @@ int currentIndex = 0;
 // Variables for speed and distance
 volatile int state = 0;        // State of the Hall effect sensor
 volatile int passing = 0;      // Tracks whether the magnet is passing
-volatile float wheelDiam = 40.0;  // Wheel diameter in cm (adjust if needed)
+volatile float wheelDiam = 46.7;  // Wheel diameter in cm (adjust if needed)
 volatile float wheelCircumference = 0.0; // Calculated circumference in cm
 volatile float distance = 0.0;  // Total distance traveled in cm
 volatile int revolutionCount = 0; // Revolution count
@@ -48,6 +48,8 @@ volatile int revolutionCount = 0; // Revolution count
 // Timer variables
 volatile unsigned long lastPulseTime = 0; // Last time the Hall effect sensor triggered (micros)
 volatile unsigned long currentPulseTime = 0; // Current time the Hall effect sensor triggered (micros)
+volatile unsigned long noPulseTime = 0; // Time in between pulses (micros)
+
 volatile float speed = 0.0; // Speed in cm/s
 
 void setup() {
@@ -152,6 +154,7 @@ void detectRevolution() {
 
   // Trigger revolution detection on low sensor state
   if (state < 400) {
+    noPulseTime = 0;
     if (passing == 0) { // Ensure only one pulse per magnet pass
       currentPulseTime = micros(); // Record current time
       unsigned long timeDiff = 0;
@@ -173,6 +176,12 @@ void detectRevolution() {
     }
   } else {
     passing = 0;              // Reset passing state
+
+    noPulseTime += micros();
+    if (noPulseTime >= 300000000)
+    {
+      speed = 0;
+    }
   }
 }
 
@@ -180,42 +189,52 @@ void detectRevolution() {
 void displayResults() {
   // Clear the LCD and display the current and voltage readings
   lcd.clear();
+  // lcd.setCursor(0, 0);
+  // lcd.print("Voltage In: ");
+  // lcd.print(vIn, 2);
+  // lcd.print(" V");
+
+  // lcd.setCursor(0, 1);
+  // lcd.print("Current: ");
+  // lcd.print(avgCurrent, 2);
+  // lcd.print(" A");
+
   lcd.setCursor(0, 0);
-  lcd.print("Voltage In: ");
-  lcd.print(vIn, 2);
-  lcd.print(" V");
-
-  lcd.setCursor(0, 1);
-  lcd.print("Current: ");
-  lcd.print(avgCurrent, 2);
-  lcd.print(" A");
-
-  lcd.setCursor(0, 2);
   lcd.print("Power: ");
   lcd.print(instPower, 4);
   lcd.print(" W");
 
-  lcd.setCursor(0, 3);
-  lcd.print("Speed: ");
-  lcd.print(speed / 100.0);  // Convert cm/s to m/s
-  lcd.print(" m/s");
-  lcd.print("Distance: ");
-  lcd.print(distance / 100.0);  // Convert cm to meters
-  lcd.print(" m");
-  lcd.setCursor(0, 4);
-  lcd.print(currentPulseTime);
+  lcd.setCursor(0, 1);
+  lcd.print("Efficiency: ");
+  if(speed != 0){
+    lcd.print(instPower/(speed * 0.036), 4); //convert Ws/cm to Wh/km
+  } else {
+    lcd.print("0");
+  }
+  lcd.print(" Wh/km");
+
+    // Main loop displays speed and distance at regular intervals
+  // lcd.setCursor(0, 3);
+  // lcd.print("Speed: ");
+  // lcd.print(speed * 0.036);  // Convert cm/s to km/h
+  // lcd.print(" m/s");
+  // lcd.print("Distance: ");
+  // lcd.print(distance / 100000.0);  // Convert cm to km
+  // lcd.print(" m");
+  // lcd.setCursor(0, 4);
+  // lcd.print(currentPulseTime);
 }
 
 // Function to print results to the Serial Monitor
 void printResults() {
   // Print the results to the Serial Monitor
-  Serial.print("Voltage In: ");
-  Serial.print(vIn, 2);
-  Serial.print(" V\t");
+  // Serial.print("Voltage In: ");
+  // Serial.print(vIn, 2);
+  // Serial.print(" V\t");
 
-  Serial.print("Current: ");
-  Serial.print(avgCurrent, 2);
-  Serial.println(" A");
+  // Serial.print("Current: ");
+  // Serial.print(avgCurrent, 2);
+  // Serial.println(" A");
 
   Serial.print("Power: ");
   Serial.print(instPower, 4);
