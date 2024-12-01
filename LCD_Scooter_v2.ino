@@ -8,8 +8,8 @@ const float R1 = 55000.0; // Resistor R1 value in ohms
 const float R2 = 5000.0;  // Resistor R2 value in ohms
 
 // Constants for Arduino ADC
-const float ADC_REF_VOLTAGE = 4;  // Reference voltage of Arduino (3.3V for ESP32)
-const int ADC_RESOLUTION = 1023;   // 12-bit ADC resolution (0 to 4095)
+const float ADC_REF_VOLTAGE = 4.1;  // Reference voltage of Arduino (3.3V for ESP32)
+const int ADC_RESOLUTION = 1024;   // 12-bit ADC resolution (0 to 4095)
 
 // Initialize the LCD (address 0x27 for a 20x4 LCD)
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -40,7 +40,7 @@ int currentIndex = 0;
 // Variables for speed and distance
 volatile int state = 0;        // State of the Hall effect sensor
 volatile int passing = 0;      // Tracks whether the magnet is passing
-volatile float wheelDiam = 46.7;  // Wheel diameter in cm (adjust if needed)
+volatile float wheelDiam = 6.5;  // Wheel diameter in cm (adjust if needed)
 volatile float wheelCircumference = 0.0; // Calculated circumference in cm
 volatile float distance = 0.0;  // Total distance traveled in cm
 volatile int revolutionCount = 0; // Revolution count
@@ -69,7 +69,7 @@ void setup() {
   TCCR1A = 0;                 // Clear Timer1 control registers
   TCCR1B = 0;
   TCNT1 = 0;                  // Initialize counter to 0
-  OCR1A = 999;              // Compare match register for 1 ms (16 MHz clock / 1024 prescaler)
+  OCR1A = 99;              // Compare match register for 1 ms (16 MHz clock / 1024 prescaler)
   TCCR1B |= (1 << WGM12);     // CTC mode
   TCCR1B |= (1 << CS12) | (1 << CS10); // Prescaler 1024
   TIMSK1 |= (1 << OCIE1A);    // Enable Timer1 compare interrupt
@@ -110,7 +110,7 @@ void loop() {
   displayResults();
 
   // Print results to the Serial Monitor
-  printResults();
+   printResults();
 
   delay(1000); // Update every 1 second
 }
@@ -144,7 +144,7 @@ float readAndFilterCurrent() {
   for (int i = 0; i < filterSize; i++) {
     sum += currentReadings[i];
   }
-  avgCurrent = sum / filterSize;
+  avgCurrent = abs(sum / filterSize);
 
   return avgCurrent;
 }
@@ -153,7 +153,7 @@ void detectRevolution() {
   state = analogRead(hallSensorPin);
 
   // Trigger revolution detection on low sensor state
-  if (state < 400) {
+  if (state < 650) {
     noPulseTime = 0;
     if (passing == 0) { // Ensure only one pulse per magnet pass
       currentPulseTime = micros(); // Record current time
@@ -178,7 +178,7 @@ void detectRevolution() {
     passing = 0;              // Reset passing state
 
     noPulseTime += micros();
-    if (noPulseTime >= 300000000)
+    if (noPulseTime >= 500000000)
     {
       speed = 0;
     }
@@ -189,23 +189,13 @@ void detectRevolution() {
 void displayResults() {
   // Clear the LCD and display the current and voltage readings
   lcd.clear();
-  // lcd.setCursor(0, 0);
-  // lcd.print("Voltage In: ");
-  // lcd.print(vIn, 2);
-  // lcd.print(" V");
-
-  // lcd.setCursor(0, 1);
-  // lcd.print("Current: ");
-  // lcd.print(avgCurrent, 2);
-  // lcd.print(" A");
-
   lcd.setCursor(0, 0);
   lcd.print("Power: ");
   lcd.print(instPower, 4);
   lcd.print(" W");
 
   lcd.setCursor(0, 1);
-  lcd.print("Efficiency: ");
+  lcd.print("Eff: ");
   if(speed != 0){
     lcd.print(instPower/(speed * 0.036), 4); //convert Ws/cm to Wh/km
   } else {
@@ -213,11 +203,19 @@ void displayResults() {
   }
   lcd.print(" Wh/km");
 
+  lcd.setCursor(0, 2);
+  lcd.print(vIn, 2);
+  lcd.print(" V,   ");
+  lcd.print(avgCurrent, 2);
+  lcd.print(" A");
+
     // Main loop displays speed and distance at regular intervals
-  // lcd.setCursor(0, 3);
-  // lcd.print("Speed: ");
-  // lcd.print(speed * 0.036);  // Convert cm/s to km/h
-  // lcd.print(" m/s");
+  lcd.setCursor(0, 3);
+  //lcd.print("Speed: ");
+  lcd.print(state);
+  lcd.print("  ");
+  lcd.print(speed * 0.036);  // Convert cm/s to km/h
+  lcd.print(" km/h");
   // lcd.print("Distance: ");
   // lcd.print(distance / 100000.0);  // Convert cm to km
   // lcd.print(" m");
@@ -239,6 +237,10 @@ void printResults() {
   Serial.print("Power: ");
   Serial.print(instPower, 4);
   Serial.println(" W");
+
+  Serial.print("Hall: ");
+  Serial.print(state);
+  Serial.println(" ");
 
   // Main loop displays speed and distance at regular intervals
   Serial.print("Speed: ");
